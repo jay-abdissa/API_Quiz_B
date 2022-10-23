@@ -3,6 +3,8 @@
 package data
 
 import (
+	"database/sql"
+
 	"quiz3.castillojadah.net/internals/validator"
 )
 
@@ -19,9 +21,42 @@ func ValidateEntries(v *validator.Validator, entries *Items)  {
 	v.Check(len(entries.Name) <= 200, "name", "must not be more than 200 bytes long")
 
 	v.Check(entries.Description != "", "description ", "must be provided")
-	v.Check(len(entries.Description ) <= 200, "description ", "must not be more than 200 bytes long")
+	v.Check(len(entries.Description ) <= 500, "description ", "must not be more than 500 bytes long")
 
 	v.Check(entries.Status != "", "status", "must be provided")
 	v.Check(len(entries.Status) <= 200, "status", "must not be more than 200 bytes long")
 
+}
+//Define an item model which wraps a sql.DB connection pool
+type ItemModel struct {
+	DB *sql.DB
+}
+//Insert allows us to create another to do list
+func (m ItemModel) Insert(items *Items) error {
+	query := `
+		INSERT INTO items (name, decription, status)
+		VALUES ($1, $2, $3)
+		RETURNING id
+	`
+	// Collect the data fields into a slice
+	args := []interface{}{
+		items.Name, items.Description,
+		items.Status,
+	}
+	return m.DB.QueryRowContext(query, args...).Scan(&items.ID)
+}
+
+//Insert allows us to get another to do list
+func (m ItemModel) Get(id int64) (*Items, error) {
+	return nil, nil
+}
+
+//Insert allows us to update another to do list
+func (m ItemModel) Update(items *Items) error {
+	return nil
+}
+
+//Insert allows us to delete another to do list
+func (m ItemModel) Delete(id int64) error {
+	return nil
 }

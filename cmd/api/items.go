@@ -34,7 +34,18 @@ func (app *application) createToDoHandler(w http.ResponseWriter, r *http.Request
 		app.failedValidationResponse(w,r,v.Errors)
 		return
 	}
-	//Display the request
-	fmt.Fprintf(w, "%+v\n", input)
-
+	//create a to do list
+	err = app.models.Items.Insert(items)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+	// Create a Location header for the newly created resource/todo
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("/v1/todo/%d", items.ID))
+	// Write the JSON response with 201 - Created status code with the body
+	// being the item data and the header being the headers map
+	err = app.writeJSON(w, http.StatusCreated, envelope{"items": items}, headers)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
