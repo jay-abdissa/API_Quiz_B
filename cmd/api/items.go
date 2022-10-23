@@ -8,17 +8,13 @@ import	(
 	"quiz3.castillojadah.net/internals/validator"
 )
 //create entry handler for the POST items endpoint
-func (app *application) createEntryHandler(w http.ResponseWriter, r *http.Request){
+func (app *application) createToDoHandler(w http.ResponseWriter, r *http.Request){
 	
 	//our target decode destination
 	var input struct{
 		Name string `json:"name"`
-		Year string `json:"year"`
-		Contact string `json:"contact"`
-		Phone string `json:"phone"`
-		Email string `json:"email"`
-		Website string `json:"website"`
-		Address string `json:"address"`
+		Description string `json:"description"`
+		Status string `json:"status"`
 	}
 
 	err := app.readJSON(w, r, &input )
@@ -26,14 +22,10 @@ func (app *application) createEntryHandler(w http.ResponseWriter, r *http.Reques
 		app.badRequestResponse(w, r, err)
 		return
 	}
-	entries := &data.Mystruct{
+	entries := &data.Items{
 		Name: input.Name,
-		Year: input.Year,
-		Contact: input.Contact,
-		Phone: input.Phone,
-		Email: input.Email,
-		Website: input.Website,
-		Address: input.Address,
+		Description: input.Description,
+		Status: input.Status,
 	}
 	//initialize a new validator instance
 	v := validator.New()
