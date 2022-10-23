@@ -3,7 +3,11 @@
 package data
 
 import (
+	"context"
 	"database/sql"
+	"errors"
+	//"fmt"
+	"time"
 
 	"quiz3.castillojadah.net/internals/validator"
 )
@@ -15,7 +19,7 @@ type Items struct {
 	Status string `json:"status"`
 }
 
-func ValidateEntries(v *validator.Validator, entries *Items)  {
+func ValidateItems(v *validator.Validator, entries *Items)  {
 	//use the check method to execute our validation checks
 	v.Check(entries.Name != "", "name", "must be provided")
 	v.Check(len(entries.Name) <= 200, "name", "must not be more than 200 bytes long")
@@ -34,7 +38,7 @@ type ItemModel struct {
 //Insert allows us to create another to do list
 func (m ItemModel) Insert(items *Items) error {
 	query := `
-		INSERT INTO items (name, decription, status)
+		INSERT INTO items (name, description, status)
 		VALUES ($1, $2, $3)
 		RETURNING id
 	`
@@ -43,20 +47,102 @@ func (m ItemModel) Insert(items *Items) error {
 		items.Name, items.Description,
 		items.Status,
 	}
-	return m.DB.QueryRowContext(query, args...).Scan(&items.ID)
+	// Create a context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// Cleanup to prevent memory leaks
+	defer cancel()
+	return m.DB.QueryRowContext(ctx, query, args...).Scan(&items.ID)
 }
 
 //Insert allows us to get another to do list
 func (m ItemModel) Get(id int64) (*Items, error) {
-	return nil, nil
+	// Ensure that there is a valid id
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+	// Create the query
+	query := `
+		SELECT id, name, description, status
+		FROM items
+		WHERE id = $1
+	`
+	// Declare a items variable to hold the returned data
+	var items Items
+	// Create a context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// Cleanup to prevent memory leaks
+	defer cancel()
+	// Execute the query using QueryRow()
+	err := m.DB.QueryRowContext(ctx, query, id).Scan(
+		&items.ID,
+		&items.Name,
+		&items.Description,
+		&items.Status,
+	)
+	// Handle any errors
+	if err != nil {
+		// Check the type of error
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+	// Success
+	return &items, nil
 }
 
 //Insert allows us to update another to do list
 func (m ItemModel) Update(items *Items) error {
-	return nil
+	// Create a query
+	query := `
+		UPDATE items
+		SET name = $1, description = $2, status = $3,
+		WHERE id = $4
+	`
+	args := []interface{}{
+		items.Name,
+		items.Description,
+		items.Status,
+		items.ID,
+	}
+	// Create a context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// Cleanup to prevent memory leaks
+	defer cancel()
+	return m.DB.QueryRowContext(ctx, query, args...).Scan(&items.ID)
 }
 
 //Insert allows us to delete another to do list
 func (m ItemModel) Delete(id int64) error {
+	// Ensure that there is a valid id
+	if id < 1 {
+		return ErrRecordNotFound
+	}
+	// Create the delete query
+	query := `
+		DELETE FROM items
+		WHERE id = $1
+	`
+	// Create a context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// Cleanup to prevent memory leaks
+	defer cancel()
+	// Execute the query
+	result, err := m.DB.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+	// Check how many rows were affected by the delete operation. We
+	// call the RowsAffected() method on the result variable
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	// Check if no rows were affected
+	if rowsAffected == 0 {
+		return ErrRecordNotFound
+	}
 	return nil
 }
