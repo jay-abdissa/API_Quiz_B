@@ -111,7 +111,17 @@ func (m ItemModel) Update(items *Items) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	// Cleanup to prevent memory leaks
 	defer cancel()
-	return m.DB.QueryRowContext(ctx, query, args...).Scan(&items.ID)
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&items.ID)
+	// Check for edit conflicts
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+	return nil
 }
 
 //Insert allows us to delete another to do list

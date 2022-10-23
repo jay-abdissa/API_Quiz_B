@@ -136,9 +136,14 @@ func (app *application) updateToDoHandler(w http.ResponseWriter, r *http.Request
 	// Pass the updated School record to the Update() method
 	err = app.models.Items.Update(items)
 	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrEditConflict):
+			app.editConflictResponse(w, r)
+		default:
 			app.serverErrorResponse(w, r, err)
-			return
 		}
+		return
+	}
 	// Write the data returned by Get()
 	err = app.writeJSON(w, http.StatusOK, envelope{"items": items}, nil)
 	if err != nil {
