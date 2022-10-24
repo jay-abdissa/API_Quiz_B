@@ -6,10 +6,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	//"fmt"
+	"fmt"
 	"time"
 
 	"quiz3.castillojadah.net/internals/validator"
+	"github.com/lib/pq"
 )
 
 type Items struct {
@@ -17,7 +18,7 @@ type Items struct {
 	Name string `json:"name"`
 	Description string `json:"description"`
 	Status string `json:"status"`
-	Mode string `json:"mode"`
+	Mode []string `json:"mode"`
 }
 
 func ValidateItems(v *validator.Validator, entries *Items)  {
@@ -31,8 +32,10 @@ func ValidateItems(v *validator.Validator, entries *Items)  {
 	v.Check(entries.Status != "", "status", "must be provided")
 	v.Check(len(entries.Status) <= 200, "status", "must not be more than 200 bytes long")
 
-	v.Check(entries.Mode != "", "mode", "must be provided")
-	v.Check(len(entries.Mode ) <= 500, "mode", "must not be more than 500 bytes long")
+	v.Check(entries.Mode != nil, "mode", "must be provided")
+	v.Check(len(entries.Mode) >= 1, "mode", "must contain at least 1 entry")
+	v.Check(len(entries.Mode) <= 5, "mode", "must contain at most 5 entries")
+	v.Check(validator.Unique(entries.Mode), "mode", "must not contain duplicate entries")
 
 }
 //Define an item model which wraps a sql.DB connection pool
@@ -49,7 +52,7 @@ func (m ItemModel) Insert(items *Items) error {
 	// Collect the data fields into a slice
 	args := []interface{}{
 		items.Name, items.Description,
-		items.Status, items.Mode,
+		items.Status, pq.Array(items.Mode),
 	}
 	// Create a context
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -83,7 +86,7 @@ func (m ItemModel) Get(id int64) (*Items, error) {
 		&items.Name,
 		&items.Description,
 		&items.Status,
-		&items.Mode,
+		pq.Array(&items.Mode),
 	)
 	// Handle any errors
 	if err != nil {
@@ -111,7 +114,7 @@ func (m ItemModel) Update(items *Items) error {
 		items.Name,
 		items.Description,
 		items.Status,
-		items.Mode,
+		pq.Array(items.Mode),
 		items.ID,
 	}
 	// Create a context
@@ -162,4 +165,56 @@ func (m ItemModel) Delete(id int64) error {
 		return ErrRecordNotFound
 	}
 	return nil
+}
+// The GetAll() method retuns a list of all the items sorted by id
+func (m ItemModel) GetAll(name string, level string, mode []string, filters Filters) ([]*Items, Metadata, error) {
+	// Construct the query
+	query := fmt.Sprintf(`
+		SELECT COUNT(*) OVER(), id, name, description, status, mode
+		FROM items
+		WHERE (to_tsvector('simple', name) @@ plainto_tsquery('simple', $1) OR $1 = '')
+		AND (to_tsvector('simple', level) @@ plainto_tsquery('simple', $2) OR $2 = '')
+		AND (mode @> $3 OR $3 = '{}' )
+		ORDER BY %s %s, id ASC
+		LIMIT $4 OFFSET $5`, filters.sortColumn(), filters.sortOrder())
+
+	// Create a 3-second-timout context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	// Execute the query
+	args := []interface{}{name, level, pq.Array(mode), filters.limit(), filters.offset()}
+	rows, err := m.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, Metadata{}, err
+	}
+	// Close the resultset
+	defer rows.Close()
+	totalRecords := 0
+	// Initialize an empty slice to hold the items data
+	item := []*Items{}
+	// Iterate over the rows in the resultset
+	for rows.Next() {
+		var items Items
+		// Scan the values from the row into items
+		err := rows.Scan(
+			&totalRecords,
+			&items.ID,
+			&items.Name,
+			&items.Description,
+			&items.Status,
+			pq.Array(&items.Mode),
+		)
+		if err != nil {
+			return nil, Metadata{}, err
+		}
+		// Add the items to our slice
+		item = append(item, &items)
+	}
+	// Check for errors after looping through the resultset
+	if err = rows.Err(); err != nil {
+		return nil, Metadata{}, err
+	}
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+	// Return the slice of items
+	return item, metadata, nil
 }

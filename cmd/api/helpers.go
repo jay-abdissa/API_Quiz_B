@@ -2,6 +2,7 @@
 package main
 
 import	(
+	
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +11,7 @@ import	(
 	"net/url"
 	"strconv"
 	"strings"
-
+	"quiz3.castillojadah.net/internals/validator"
 	"github.com/julienschmidt/httprouter"
 )
 type envelope map [string] interface{}
@@ -116,4 +117,22 @@ func (app *application) readCSV(qs url.Values, key string, defaultValue []string
 	}
 	// Split the string based on the "," delimeter
 	return strings.Split(value, ",")
+}
+
+// The readInt() method converts a string value from the query string to an integer value.
+// If the value cannot be converted to an integer then a validation error is added to
+// the validation errors map
+func (app *application) readInt(qs url.Values, key string, defaultValue int, v *validator.Validator) int {
+	// Get the value
+	value := qs.Get(key)
+	if value == "" {
+		return defaultValue
+	}
+	// Perform the conversion to an integer
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		v.AddError(key, "must be an integer value")
+		return defaultValue
+	}
+	return intValue
 }
