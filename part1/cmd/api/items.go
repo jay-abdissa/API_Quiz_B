@@ -125,9 +125,9 @@ func (app *application) updateToDoHandler(w http.ResponseWriter, r *http.Request
 	if input.Status!= nil {
 		items.Status = *input.Status
 	}
-	if input.Mode!= nil {
-		items.Mode= *input.Mode
-	}
+	//if input.Mode!= nil {
+	//	items.Mode= *input.Mode
+	//}
 
 	// Perform validation on the updated items. If validation fails, then
 	// we send a 422 - Unprocessable Entity respose to the client
@@ -200,8 +200,8 @@ func (app *application) listToDoHandler(w http.ResponseWriter, r *http.Request) 
 	qs := r.URL.Query()
 	// Use the helper methods to extract the values
 	input.Name = app.readString(qs, "name", "")
-	input.Level = app.readString(qs, "description", "")
-	input.Level = app.readString(qs, "status", "")
+	input.Description = app.readString(qs, "description", "")
+	input.Status = app.readString(qs, "status", "")
 	input.Mode = app.readCSV(qs, "mode", []string{})
 	// Get the page information
 	input.Filters.Page = app.readInt(qs, "page", 1, v)
