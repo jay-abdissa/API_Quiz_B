@@ -62,7 +62,7 @@ func (m ItemModel) Get(id int64) (*Items, error) {
 	}
 	// Create the query
 	query := `
-		SELECT id, name, description, status
+		SELECT pg_sleep(15), id, name, description, status
 		FROM items
 		WHERE id = $1
 	`
@@ -74,6 +74,7 @@ func (m ItemModel) Get(id int64) (*Items, error) {
 	defer cancel()
 	// Execute the query using QueryRow()
 	err := m.DB.QueryRowContext(ctx, query, id).Scan(
+		&[]byte{},
 		&items.ID,
 		&items.Name,
 		&items.Description,

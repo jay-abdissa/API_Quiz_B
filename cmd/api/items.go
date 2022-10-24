@@ -78,7 +78,7 @@ func (app *application) showToDoHandler(w http.ResponseWriter, r *http.Request) 
 }
 func (app *application) updateToDoHandler(w http.ResponseWriter, r *http.Request) {
 	// This method does a partial replacement
-	// Get the id for the school that needs updating
+	// Get the id for the item that needs updating
 	id, err := app.readIDParam(r)
 	if err != nil {
 		app.notFoundResponse(w, r)
@@ -133,7 +133,7 @@ func (app *application) updateToDoHandler(w http.ResponseWriter, r *http.Request
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
-	// Pass the updated School record to the Update() method
+	// Pass the updated item record to the Update() method
 	err = app.models.Items.Update(items)
 	if err != nil {
 		switch {
