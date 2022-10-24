@@ -173,10 +173,11 @@ func (m ItemModel) GetAll(name string, level string, mode []string, filters Filt
 		SELECT COUNT(*) OVER(), id, name, description, status, mode
 		FROM items
 		WHERE (to_tsvector('simple', name) @@ plainto_tsquery('simple', $1) OR $1 = '')
-		AND (to_tsvector('simple', level) @@ plainto_tsquery('simple', $2) OR $2 = '')
-		AND (mode @> $3 OR $3 = '{}' )
+		AND (to_tsvector('simple', description) @@ plainto_tsquery('simple', $2) OR $2 = '')
+		AND (to_tsvector('simple', status) @@ plainto_tsquery('simple', $3 OR $3 = '')
+		AND (mode @> $4 OR $4 = '{}' )
 		ORDER BY %s %s, id ASC
-		LIMIT $4 OFFSET $5`, filters.sortColumn(), filters.sortOrder())
+		LIMIT $5 OFFSET $6`, filters.sortColumn(), filters.sortOrder())
 
 	// Create a 3-second-timout context
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
