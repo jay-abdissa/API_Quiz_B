@@ -167,7 +167,7 @@ func (m ItemModel) Delete(id int64) error {
 	return nil
 }
 // The GetAll() method retuns a list of all the items sorted by id
-func (m ItemModel) GetAll(name string, level string, mode []string, filters Filters) ([]*Items, Metadata, error) {
+func (m ItemModel) GetAll(name string, description string, status string ,mode []string, filters Filters) ([]*Items, Metadata, error) {
 	// Construct the query
 	query := fmt.Sprintf(`
 		SELECT COUNT(*) OVER(), id, name, description, status, mode
@@ -183,7 +183,7 @@ func (m ItemModel) GetAll(name string, level string, mode []string, filters Filt
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	// Execute the query
-	args := []interface{}{name, level, pq.Array(mode), filters.limit(), filters.offset()}
+	args := []interface{}{name, description, status,pq.Array(mode), filters.limit(), filters.offset()}
 	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, Metadata{}, err
