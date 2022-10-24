@@ -7,6 +7,7 @@ import	(
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -92,8 +93,27 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst int
 	if err != io.EOF {
 		return errors.New("body must only contain a single value")
 	}
-		
-
-	
 	return nil
+}
+
+// The readString() method returns a string value from the query parameter
+// string or returns a default value if no matching key is found
+func (app *application) readString(qs url.Values, key string, defaultValue string) string {
+	// Get the value
+	value := qs.Get(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
+// The readCSV() method splits a value into a slice based on the comma separator.
+// If no matching key is found then the default value is returned
+func (app *application) readCSV(qs url.Values, key string, defaultValue []string) []string {
+	// Get the value
+	value := qs.Get(key)
+	if value == "" {
+		return defaultValue
+	}
+	// Split the string based on the "," delimeter
+	return strings.Split(value, ",")
 }

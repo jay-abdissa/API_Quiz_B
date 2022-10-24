@@ -16,6 +16,7 @@ func (app *application) createToDoHandler(w http.ResponseWriter, r *http.Request
 		Name string `json:"name"`
 		Description string `json:"description"`
 		Status string `json:"status"`
+		Mode string `json:"mode"`
 	}
 
 	err := app.readJSON(w, r, &input )
@@ -27,6 +28,7 @@ func (app *application) createToDoHandler(w http.ResponseWriter, r *http.Request
 		Name: input.Name,
 		Description: input.Description,
 		Status: input.Status,
+		Mode: input.Mode,
 	}
 	//initialize a new validator instance
 	v := validator.New()
@@ -104,6 +106,7 @@ func (app *application) updateToDoHandler(w http.ResponseWriter, r *http.Request
 		Name    *string  `json:"name"`
 		Description  *string  `json:"description"`
 		Status *string  `json:"status"`
+		Mode *string  `json:"Mode"`
 	}
 
 	// Initialize a new json.Decoder instance
@@ -121,6 +124,9 @@ func (app *application) updateToDoHandler(w http.ResponseWriter, r *http.Request
 	}
 	if input.Status!= nil {
 		items.Status = *input.Status
+	}
+	if input.Mode!= nil {
+		items.Mode= *input.Mode
 	}
 
 	// Perform validation on the updated items. If validation fails, then

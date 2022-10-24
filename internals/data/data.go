@@ -17,6 +17,7 @@ type Items struct {
 	Name string `json:"name"`
 	Description string `json:"description"`
 	Status string `json:"status"`
+	Mode string `json:"mode"`
 }
 
 func ValidateItems(v *validator.Validator, entries *Items)  {
@@ -24,11 +25,14 @@ func ValidateItems(v *validator.Validator, entries *Items)  {
 	v.Check(entries.Name != "", "name", "must be provided")
 	v.Check(len(entries.Name) <= 200, "name", "must not be more than 200 bytes long")
 
-	v.Check(entries.Description != "", "description ", "must be provided")
-	v.Check(len(entries.Description ) <= 500, "description ", "must not be more than 500 bytes long")
+	v.Check(entries.Description != "", "description", "must be provided")
+	v.Check(len(entries.Description ) <= 500, "description", "must not be more than 500 bytes long")
 
 	v.Check(entries.Status != "", "status", "must be provided")
 	v.Check(len(entries.Status) <= 200, "status", "must not be more than 200 bytes long")
+
+	v.Check(entries.Mode != "", "mode", "must be provided")
+	v.Check(len(entries.Mode ) <= 500, "mode", "must not be more than 500 bytes long")
 
 }
 //Define an item model which wraps a sql.DB connection pool
@@ -38,14 +42,14 @@ type ItemModel struct {
 //Insert allows us to create another to do list
 func (m ItemModel) Insert(items *Items) error {
 	query := `
-		INSERT INTO items (name, description, status)
-		VALUES ($1, $2, $3)
+		INSERT INTO items (name, description, status, mode)
+		VALUES ($1, $2, $3, $4)
 		RETURNING id
 	`
 	// Collect the data fields into a slice
 	args := []interface{}{
 		items.Name, items.Description,
-		items.Status,
+		items.Status, items.Mode,
 	}
 	// Create a context
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -62,7 +66,7 @@ func (m ItemModel) Get(id int64) (*Items, error) {
 	}
 	// Create the query
 	query := `
-		SELECT pg_sleep(15), id, name, description, status
+		SELECT pg_sleep(15), id, name, description, status, mode
 		FROM items
 		WHERE id = $1
 	`
@@ -79,6 +83,7 @@ func (m ItemModel) Get(id int64) (*Items, error) {
 		&items.Name,
 		&items.Description,
 		&items.Status,
+		&items.Mode,
 	)
 	// Handle any errors
 	if err != nil {
@@ -99,13 +104,14 @@ func (m ItemModel) Update(items *Items) error {
 	// Create a query
 	query := `
 		UPDATE items
-		SET name = $1, description = $2, status = $3,
-		WHERE id = $4
+		SET name = $1, description = $2, status = $3, mode = $4
+		WHERE id = $5
 	`
 	args := []interface{}{
 		items.Name,
 		items.Description,
 		items.Status,
+		items.Mode,
 		items.ID,
 	}
 	// Create a context
